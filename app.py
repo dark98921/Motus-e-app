@@ -1,7 +1,7 @@
 from flask import Flask, render_template, request, redirect, session, send_file, flash
 import sqlite3
 from werkzeug.security import generate_password_hash, check_password_hash
-import pandas as pd
+import openpyxl
 import io
 import os
 
@@ -105,23 +105,31 @@ def dashboard():
             flash("Stato presenza aggiornato!", "success")
             return redirect("/dashboard?search=" + search_query)
 
-        # Import Excel dalla dashboard
+        # Import Excel dalla dashboard (SENZA PANDAS)
         if "import_excel" in request.files:
             file = request.files["import_excel"]
             if file.filename != '':
                 try:
-                    df = pd.read_excel(file)
+                    workbook = openpyxl.load_workbook(file)
+                    sheet = workbook.active
+                    
                     imported_count = 0
-                    for _, row in df.iterrows():
-                        cur.execute("SELECT id FROM participants WHERE name=? AND surname=?", 
-                                   (row.get("Nome",""), row.get("Cognome","")))
-                        existing = cur.fetchone()
-                        
-                        if not existing:
-                            cur.execute("INSERT INTO participants (name,surname,role,company) VALUES (?,?,?,?)",
-                                        (row.get("Nome",""), row.get("Cognome",""), 
-                                         row.get("Ruolo",""), row.get("Azienda","")))
-                            imported_count += 1
+                    for row in sheet.iter_rows(min_row=2, values_only=True):  # Salta l'header
+                        if row[0] and row[1]:  # Se c'è almeno nome e cognome
+                            name = row[0] or ""
+                            surname = row[1] or ""
+                            role = row[2] if len(row) > 2 else ""
+                            company = row[3] if len(row) > 3 else ""
+                            
+                            # Controlla se il partecipante esiste già
+                            cur.execute("SELECT id FROM participants WHERE name=? AND surname=?", 
+                                       (name, surname))
+                            existing = cur.fetchone()
+                            
+                            if not existing:
+                                cur.execute("INSERT INTO participants (name,surname,role,company) VALUES (?,?,?,?)",
+                                            (name, surname, role, company))
+                                imported_count += 1
                     
                     conn.commit()
                     flash(f"Importati {imported_count} nuovi partecipanti!", "success")
@@ -214,18 +222,25 @@ def participants():
             file = request.files["import_excel"]
             if file.filename != '':
                 try:
-                    df = pd.read_excel(file)
+                    workbook = openpyxl.load_workbook(file)
+                    sheet = workbook.active
+                    
                     imported_count = 0
-                    for _, row in df.iterrows():
-                        cur.execute("SELECT id FROM participants WHERE name=? AND surname=?", 
-                                   (row.get("Nome",""), row.get("Cognome","")))
-                        existing = cur.fetchone()
-                        
-                        if not existing:
-                            cur.execute("INSERT INTO participants (name,surname,role,company) VALUES (?,?,?,?)",
-                                        (row.get("Nome",""), row.get("Cognome",""), 
-                                         row.get("Ruolo",""), row.get("Azienda","")))
-                            imported_count += 1
+                    for row in sheet.iter_rows(min_row=2, values_only=True):
+                        if row[0] and row[1]:
+                            name = row[0] or ""
+                            surname = row[1] or ""
+                            role = row[2] if len(row) > 2 else ""
+                            company = row[3] if len(row) > 3 else ""
+                            
+                            cur.execute("SELECT id FROM participants WHERE name=? AND surname=?", 
+                                       (name, surname))
+                            existing = cur.fetchone()
+                            
+                            if not existing:
+                                cur.execute("INSERT INTO participants (name,surname,role,company) VALUES (?,?,?,?)",
+                                            (name, surname, role, company))
+                                imported_count += 1
                     
                     conn.commit()
                     flash(f"Importati {imported_count} nuovi partecipanti!", "success")
@@ -300,19 +315,34 @@ def export_excel():
         return redirect("/")
     
     conn = get_db_connection()
-    df = pd.read_sql_query("""
-        SELECT name as Nome, surname as Cognome, role as Ruolo, 
-               company as Azienda, attended as Presente 
-        FROM participants
-    """, conn)
+    cur = conn.cursor()
+    cur.execute("SELECT name, surname, role, company, attended FROM participants")
+    participants_data = cur.fetchall()
     conn.close()
     
-    output = io.BytesIO()
-    with pd.ExcelWriter(output, engine="xlsxwriter") as writer:
-        df.to_excel(writer, index=False, sheet_name="Partecipanti")
-        writer.close()
+    # Crea Excel con openpyxl (SENZA PANDAS)
+    workbook = openpyxl.Workbook()
+    sheet = workbook.active
+    sheet.title = "Partecipanti"
     
+    # Header
+    headers = ["Nome", "Cognome", "Ruolo", "Azienda", "Presente"]
+    for col, header in enumerate(headers, 1):
+        sheet.cell(row=1, column=col, value=header)
+    
+    # Dati
+    for row, participant in enumerate(participants_data, 2):
+        sheet.cell(row=row, column=1, value=participant["name"])
+        sheet.cell(row=row, column=2, value=participant["surname"])
+        sheet.cell(row=row, column=3, value=participant["role"])
+        sheet.cell(row=row, column=4, value=participant["company"])
+        sheet.cell(row=row, column=5, value="Sì" if participant["attended"] else "No")
+    
+    # Salva in memoria
+    output = io.BytesIO()
+    workbook.save(output)
     output.seek(0)
+    
     return send_file(output, download_name="partecipanti_motus.xlsx", as_attachment=True)
 
 @app.route("/logout")
