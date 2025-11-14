@@ -1,1 +1,159 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestione Utenti - Motus-E</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+    <style>
+        :root {
+            --motus-blue: #0056b3;
+            --motus-green: #00a651;
+        }
+        
+        .navbar-motuse {
+            background: linear-gradient(135deg, var(--motus-blue), var(--motus-green));
+        }
+        
+        .btn-motuse {
+            background: linear-gradient(45deg, var(--motus-blue), var(--motus-green));
+            border: none;
+            color: white;
+        }
+        
+        .card-motuse {
+            border: none;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark navbar-motuse">
+        <div class="container-fluid">
+            <a class="navbar-brand fw-bold" href="{{ url_for('dashboard') }}">
+                <i class="bi bi-lightning-charge-fill me-2"></i>
+                MOTUS-E
+            </a>
+            <div class="d-flex align-items-center">
+                <span class="text-white me-3">{{ session.username }}</span>
+                <a href="{{ url_for('logout') }}" class="btn btn-outline-light btn-sm">Logout</a>
+            </div>
+        </div>
+    </nav>
 
+    <div class="container-fluid mt-4">
+        <div class="row">
+            <div class="col-12">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h2>
+                        <i class="bi bi-person-gear me-2"></i>
+                        Gestione Utenti
+                    </h2>
+                    <a href="{{ url_for('dashboard') }}" class="btn btn-outline-primary">
+                        <i class="bi bi-arrow-left me-2"></i>Torna alla Dashboard
+                    </a>
+                </div>
+
+                <!-- Flash Messages -->
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                    {% if messages %}
+                        {% for category, message in messages %}
+                            <div class="alert alert-{{ 'danger' if category == 'error' else 'success' }} alert-dismissible fade show">
+                                {{ message }}
+                                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+                {% endwith %}
+
+                <!-- Add User Form -->
+                <div class="card card-motuse mb-4">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">
+                            <i class="bi bi-person-plus me-2"></i>
+                            Crea Nuovo Utente
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <form method="POST" class="row g-3">
+                            <div class="col-md-4">
+                                <input type="text" class="form-control" name="username" placeholder="Username" required>
+                            </div>
+                            <div class="col-md-3">
+                                <input type="password" class="form-control" name="password" placeholder="Password" required>
+                            </div>
+                            <div class="col-md-3">
+                                <select name="role" class="form-select" required>
+                                    <option value="user">User</option>
+                                    <option value="admin">Admin</option>
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <button type="submit" name="create_user" class="btn btn-motuse w-100">
+                                    <i class="bi bi-plus-circle me-1"></i> Crea
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Users Table -->
+                <div class="card card-motuse">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">
+                            <i class="bi bi-people-fill me-2"></i>
+                            Elenco Utenti
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-striped table-hover">
+                                <thead class="table-dark">
+                                    <tr>
+                                        <th>Username</th>
+                                        <th>Ruolo</th>
+                                        <th>Data Creazione</th>
+                                        <th>Nuova Password</th>
+                                        <th>Azioni</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for user in users %}
+                                    <tr>
+                                        <form method="POST">
+                                            <td>{{ user.username }}</td>
+                                            <td>
+                                                <select name="role" class="form-select form-select-sm">
+                                                    <option value="user" {% if user.role=='user' %}selected{% endif %}>User</option>
+                                                    <option value="admin" {% if user.role=='admin' %}selected{% endif %}>Admin</option>
+                                                </select>
+                                            </td>
+                                            <td>{{ user.created_at[:10] }}</td>
+                                            <td>
+                                                <input type="password" name="new_password" 
+                                                       class="form-control form-control-sm" placeholder="Lascia vuoto per non modificare">
+                                            </td>
+                                            <td>
+                                                <input type="hidden" name="user_id" value="{{ user.id }}">
+                                                <button type="submit" name="update_user" 
+                                                        class="btn btn-outline-success btn-sm">
+                                                    <i class="bi bi-check-lg me-1"></i>Aggiorna
+                                                </button>
+                                            </td>
+                                        </form>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
