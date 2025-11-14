@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Motus-E</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --motus-blue: #0056b3;
+            --motus-green: #00a651;
+            --motus-orange: #ff6b00;
+            --motus-dark: #1a1a1a;
+            --motus-light: #f8f9fa;
+        }
+        
+        body {
+            background-color: #f5f7fa;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        .navbar-motuse {
+            background: linear-gradient(135deg, var(--motus-blue), var(--motus-green));
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+        
+        .sidebar {
+            background: white;
+            min-height: calc(100vh - 76px);
+            box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
+            position: sticky;
+            top: 76px;
+        }
+        
+        .sidebar .nav-link {
+            color: var(--motus-dark);
+            padding: 12px 20px;
+            margin: 5px 10px;
+            border-radius: 8px;
+            transition: all 0.3s;
+        }
+        
+        .sidebar .nav-link:hover,
+        .sidebar .nav-link.active {
+            background: linear-gradient(135deg, var(--motus-blue), var(--motus-green));
+            color: white;
+        }
+        
+        .sidebar .nav-link i {
+            width: 20px;
+            text-align: center;
+        }
+        
+        .card-motuse {
+            border: none;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+            transition: transform 0.3s;
+            border-left: 4px solid var(--motus-blue);
+        }
+        
+        .card-motuse:hover {
+            transform: translateY(-5px);
+        }
+        
+        .card-motuse.green {
+            border-left-color: var(--motus-green);
+        }
+        
+        .card-motuse.orange {
+            border-left-color: var(--motus-orange);
+        }
+        
+        .stat-number {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: var(--motus-blue);
+        }
+        
+        .card-motuse.green .stat-number {
+            color: var(--motus-green);
+        }
+        
+        .card-motuse.orange .stat-number {
+            color: var(--motus-orange);
+        }
+        
+        .welcome-card {
+            background: linear-gradient(135deg, var(--motus-blue), var(--motus-green));
+            color: white;
+            border-radius: 15px;
+        }
+        
+        .btn-motuse {
+            background: linear-gradient(45deg, var(--motus-blue), var(--motus-green));
+            border: none;
+            border-radius: 8px;
+            color: white;
+            font-weight: 600;
+            padding: 10px 20px;
+            transition: all 0.3s;
+        }
+        
+        .btn-motuse:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 86, 179, 0.3);
+            color: white;
+        }
+        
+        .table-motuse {
+            background: white;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+        }
+        
+        .table-motuse thead {
+            background: linear-gradient(135deg, var(--motus-blue), var(--motus-green));
+            color: white;
+        }
+        
+        .attendance-btn {
+            padding: 4px 12px;
+            font-size: 0.85rem;
+            border-radius: 20px;
+        }
+        
+        .role-company {
+            font-size: 0.85rem;
+            color: #666;
+        }
+        
+        .search-box {
+            max-width: 300px;
+        }
+    </style>
+</head>
+<body>
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-dark navbar-motuse">
+        <div class="container-fluid">
+            <a class="navbar-brand fw-bold" href="#">
+                <i class="bi bi-lightning-charge-fill me-2"></i>
+                MOTUS-E
+            </a>
+            
+            <div class="d-flex align-items-center">
+                <span class="text-white me-3">
+                    <i class="bi bi-person-circle me-2"></i>
+                    {{ session.username }} ({{ session.role }})
+                </span>
+                <a href="{{ url_for('logout') }}" class="btn btn-outline-light btn-sm">
+                    <i class="bi bi-box-arrow-right me-1"></i> Logout
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid">
+        <div class="row">
+            <!-- Sidebar -->
+            <div class="col-md-3 col-lg-2 sidebar d-none d-md-block">
+                <div class="d-flex flex-column flex-shrink-0 p-3">
+                    <ul class="nav nav-pills flex-column mb-auto">
+                        <li class="nav-item">
+                            <a href="{{ url_for('dashboard') }}" class="nav-link active">
+                                <i class="bi bi-speedometer2 me-2"></i>
+                                Dashboard
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="{{ url_for('participants') }}" class="nav-link">
+                                <i class="bi bi-people me-2"></i>
+                                Partecipanti
+                            </a>
+                        </li>
+                        {% if session.role == "admin" %}
+                        <li class="nav-item">
+                            <a href="{{ url_for('users') }}" class="nav-link">
+                                <i class="bi bi-person-gear me-2"></i>
+                                Gestione Utenti
+                            </a>
+                        </li>
+                        {% endif %}
+                        <li class="nav-item">
+                            <a href="{{ url_for('export_excel') }}" class="nav-link">
+                                <i class="bi bi-download me-2"></i>
+                                Export Excel
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Main Content -->
+            <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4 py-4">
+                <!-- Welcome Card -->
+                <div class="welcome-card p-4 mb-4">
+                    <div class="row align-items-center">
+                        <div class="col-md-8">
+                            <h2 class="mb-2">Benvenuto, {{ session.username }}!</h2>
+                            <p class="mb-0">Sistema di gestione eventi e partecipanti Motus-E</p>
+                        </div>
+                        <div class="col-md-4 text-end">
+                            <i class="bi bi-calendar-event" style="font-size: 3rem; opacity: 0.8;"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Flash Messages -->
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                    {% if messages %}
+                        {% for category, message in messages %}
+                            <div class="alert alert-{{ 'danger' if category == 'error' else 'success' }} alert-dismissible fade show">
+                                {{ message }}
+                                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+                {% endwith %}
+
+                <!-- Statistics Cards -->
+                <div class="row mb-4">
+                    <div class="col-md-4 mb-3">
+                        <div class="card card-motuse h-100">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <h6 class="card-title text-muted">TOTALE PARTECIPANTI</h6>
+                                        <h2 class="stat-number">{{ total_participants }}</h2>
+                                    </div>
+                                    <i class="bi bi-people-fill" style="font-size: 2rem; color: #0056b3;"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-4 mb-3">
+                        <div class="card card-motuse green h-100">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <h6 class="card-title text-muted">PARTECIPANTI PRESENTI</h6>
+                                        <h2 class="stat-number">{{ present_participants }}</h2>
+                                    </div>
+                                    <i class="bi bi-check-circle-fill" style="font-size: 2rem; color: #00a651;"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-4 mb-3">
+                        <div class="card card-motuse orange h-100">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <h6 class="card-title text-muted">UTENTI ATTIVI</h6>
+                                        <h2 class="stat-number">{{ total_users }}</h2>
+                                    </div>
+                                    <i class="bi bi-person-check-fill" style="font-size: 2rem; color: #ff6b00;"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <!-- Gestione Presenze -->
+                    <div class="col-lg-8 mb-4">
+                        <div class="card">
+                            <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                                <h5 class="card-title mb-0">
+                                    <i class="bi bi-clipboard-check me-2"></i>
+                                    Gestione Presenze
+                                </h5>
+                                <form method="GET" class="d-flex search-box">
+                                    <input type="text" class="form-control form-control-sm me-2" 
+                                           name="search" placeholder="Cerca partecipante..." 
+                                           value="{{ search_query }}">
+                                    <button type="submit" class="btn btn-outline-primary btn-sm">
+                                        <i class="bi bi-search"></i>
+                                    </button>
+                                    {% if search_query %}
+                                    <a href="{{ url_for('dashboard') }}" class="btn btn-outline-secondary btn-sm ms-2">
+                                        <i class="bi bi-x"></i>
+                                    </a>
+                                    {% endif %}
+                                </form>
+                            </div>
+                            <div class="card-body">
+                                {% if all_participants %}
+                                <div class="table-responsive" style="max-height: 500px; overflow-y: auto;">
+                                    <table class="table table-hover">
+                                        <thead>
+                                            <tr>
+                                                <th>Partecipante</th>
+                                                <th>Ruolo/Azienda</th>
+                                                <th class="text-center">Stato</th>
+                                                <th class="text-center">Azione</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for p in all_participants %}
+                                            <tr>
+                                                <td>
+                                                    <strong>{{ p.name }} {{ p.surname }}</strong>
+                                                </td>
+                                                <td>
+                                                    <div class="role-company">
+                                                        {% if p.role and p.company %}
+                                                            {{ p.role }} - {{ p.company }}
+                                                        {% elif p.role %}
+                                                            {{ p.role }}
+                                                        {% elif p.company %}
+                                                            {{ p.company }}
+                                                        {% else %}
+                                                            -
+                                                        {% endif %}
+                                                    </div>
+                                                </td>
+                                                <td class="text-center">
+                                                    <span class="badge bg-{{ p.status_class }}">
+                                                        {{ p.status_text }}
+                                                    </span>
+                                                </td>
+                                                <td class="text-center">
+                                                    <form method="POST" class="d-inline">
+                                                        <input type="hidden" name="participant_id" value="{{ p.id }}">
+                                                        <input type="hidden" name="current_status" value="{{ p.attended }}">
+                                                        <button type="submit" name="toggle_attendance" 
+                                                                class="btn btn-sm {{ 'btn-outline-warning' if p.attended else 'btn-outline-success' }} attendance-btn">
+                                                            <i class="bi {{ 'bi-x-circle' if p.attended else 'bi-check-circle' }} me-1"></i>
+                                                            {{ 'Segna Assente' if p.attended else 'Segna Presente' }}
+                                                        </button>
+                                                    </form>
+                                                </td>
+                                            </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                                {% else %}
+                                <p class="text-muted text-center">Nessun partecipante registrato</p>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Quick Actions -->
+                    <div class="col-lg-4 mb-4">
+                        <div class="card">
+                            <div class="card-header bg-white">
+                                <h5 class="card-title mb-0">
+                                    <i class="bi bi-lightning-fill me-2"></i>
+                                    Azioni Rapide
+                                </h5>
+                            </div>
+                            <div class="card-body">
+                                <!-- Import Excel -->
+                                <div class="mb-4">
+                                    <h6 class="text-muted mb-3">
+                                        <i class="bi bi-upload me-2"></i>
+                                        Importa da Excel
+                                    </h6>
+                                    <form method="POST" enctype="multipart/form-data" class="row g-2">
+                                        <div class="col-12">
+                                            <input type="file" class="form-control form-control-sm" 
+                                                   name="import_excel" accept=".xlsx,.xls" required>
+                                        </div>
+                                        <div class="col-12">
+                                            <button type="submit" class="btn btn-motuse btn-sm w-100">
+                                                <i class="bi bi-upload me-1"></i>
+                                                Carica File Excel
+                                            </button>
+                                        </div>
+                                    </form>
+                                    <small class="text-muted mt-2 d-block">
+                                        Formato richiesto: colonne Nome, Cognome, Ruolo, Azienda
+                                    </small>
+                                </div>
+
+                                <div class="row g-3">
+                                    <div class="col-12">
+                                        <a href="{{ url_for('participants') }}" class="btn btn-motuse w-100">
+                                            <i class="bi bi-person-plus me-2"></i>
+                                            Nuovo Partecipante
+                                        </a>
+                                    </div>
+                                    <div class="col-12">
+                                        <a href="{{ url_for('export_excel') }}" class="btn btn-outline-primary w-100">
+                                            <i class="bi bi-download me-2"></i>
+                                            Export Excel
+                                        </a>
+                                    </div>
+                                    {% if session.role == "admin" %}
+                                    <div class="col-12">
+                                        <a href="{{ url_for('users') }}" class="btn btn-outline-success w-100">
+                                            <i class="bi bi-person-gear me-2"></i>
+                                            Gestione Utenti
+                                        </a>
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
